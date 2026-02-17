@@ -1,0 +1,67 @@
+version: "3.9"
+
+services:
+  # ------------------------------------------------------------------ #
+  # PostgreSQL database                                                  #
+  # ------------------------------------------------------------------ #
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: support_tickets
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ------------------------------------------------------------------ #
+  # Django backend                                                       #
+  # ------------------------------------------------------------------ #
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Database
+      POSTGRES_DB: support_tickets
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+
+      # Django
+      DEBUG: "False"
+      SECRET_KEY: "change-this-in-production-to-a-long-random-string"
+      ALLOWED_HOSTS: "*"
+      CORS_ALLOWED_ORIGINS: "http://localhost,http://localhost:80,http://frontend"
+
+      # LLM — provide your API key here or via a .env file
+      # Using Anthropic Claude by default. Change LLM_PROVIDER to "openai"
+      # and set your OpenAI key if you prefer.
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_PROVIDER: ${LLM_PROVIDER:-anthropic}
+    ports:
+      - "8000:8000"
+
+  # ------------------------------------------------------------------ #
+  # React frontend (built, served via Nginx)                            #
+  # ------------------------------------------------------------------ #
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+
+volumes:
+  postgres_data:
