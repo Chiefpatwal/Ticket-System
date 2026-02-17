@@ -93,9 +93,55 @@ def _classify_with_openai(description: str) -> dict:
     return json.loads(raw)
 
 
+def _classify_with_gemini(description: str) -> dict:
+    """Call Google Gemini to classify a ticket description."""
+    import urllib.request  # stdlib only — no extra package needed
+
+    prompt = (
+        SYSTEM_PROMPT
+        + "\n\n"
+        + USER_PROMPT_TEMPLATE.format(description=description[:2000])
+    )
+
+    payload = json.dumps({
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "maxOutputTokens": 64,
+            "temperature": 0,
+        },
+    }).encode()
+
+    url = (
+        "https://generativelanguage.googleapis.com/v1beta/models/"
+        f"gemini-2.0-flash:generateContent?key={settings.LLM_API_KEY}"
+    )
+
+    req = urllib.request.Request(
+        url,
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        data = json.loads(resp.read())
+
+    raw = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+
+    # Strip markdown code fences if Gemini adds them
+    if raw.startswith("```"):
+        raw = raw.split("```")[1]
+        if raw.startswith("json"):
+            raw = raw[4:]
+        raw = raw.strip()
+
+    return json.loads(raw)
+
+
 _PROVIDERS = {
     "anthropic": _classify_with_anthropic,
     "openai": _classify_with_openai,
+    "gemini": _classify_with_gemini,
 }
 
 

@@ -44,10 +44,10 @@ services:
       CORS_ALLOWED_ORIGINS: "http://localhost,http://localhost:80,http://frontend"
 
       # LLM — provide your API key here or via a .env file
-      # Using Anthropic Claude by default. Change LLM_PROVIDER to "openai"
-      # and set your OpenAI key if you prefer.
+      # Supported providers: gemini | anthropic | openai
+      
       LLM_API_KEY: ${LLM_API_KEY:-}
-      LLM_PROVIDER: ${LLM_PROVIDER:-anthropic}
+      LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
     ports:
       - "8000:8000"
 
