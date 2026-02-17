@@ -4,7 +4,8 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 COPY package.json ./
-RUN npm install --legacy-peer-deps
+RUN npm install --legacy-peer-deps && \
+    npm install ajv@^8.11.0 ajv-keywords@^5.1.0 --legacy-peer-deps
 
 COPY . .
 RUN npm run build
